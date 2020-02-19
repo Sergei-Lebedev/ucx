@@ -12,6 +12,7 @@
 #  include "config.h" /* Defines UCS_MAX_LOG_LEVEL */
 #endif
 
+#include <ucs/ucs_config.h>
 #include <ucs/sys/compiler_def.h>
 #include <ucs/config/global_opts.h>
 #include <stdarg.h>
@@ -25,6 +26,8 @@ BEGIN_C_DECLS
 #define ucs_log_is_enabled(_level) \
     ucs_unlikely(((_level) <= UCS_MAX_LOG_LEVEL) && ((_level) <= (ucs_global_opts.log_level)))
 
+#define ucs_component_log_is_enabled(_level, _comp_log_config) \
+    ucs_unlikely(((_level) <= UCS_MAX_LOG_LEVEL) && ((_level) <= (((ucs_component_log_config_t*)_comp_log_config)->log_level)))
 
 #define ucs_log(_level, _fmt, ...) \
     do { \
@@ -34,6 +37,13 @@ BEGIN_C_DECLS
         } \
     } while (0)
 
+#define ucs_component_log(_level, _comp_log_config, _fmt, ...) \
+    do { \
+        if (ucs_component_log_is_enabled(_level, _comp_log_config)) { \
+            ucs_log_dispatch(__FILE__, __LINE__, __func__, \
+                             (ucs_log_level_t)(_level), _fmt, ## __VA_ARGS__); \
+        } \
+    } while (0)
 
 #define ucs_error(_fmt, ...)        ucs_log(UCS_LOG_LEVEL_ERROR, _fmt, ## __VA_ARGS__)
 #define ucs_warn(_fmt, ...)         ucs_log(UCS_LOG_LEVEL_WARN, _fmt,  ## __VA_ARGS__)
@@ -74,6 +84,9 @@ typedef enum {
     UCS_LOG_FUNC_RC_CONTINUE
 } ucs_log_func_rc_t;
 
+typedef struct ucs_component_log_config {
+    ucs_log_level_t log_level;
+} ucs_component_log_config_t;
 
 /**
  * Function type for handling log messages.
@@ -142,6 +155,7 @@ void ucs_log_fatal_error(const char *format, ...);
  */
 void ucs_log_early_init();
 void ucs_log_init();
+void ucs_component_log_init();
 void ucs_log_cleanup();
 
 

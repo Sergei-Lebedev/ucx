@@ -129,9 +129,9 @@ ucs_log_default_handler(const char *file, unsigned line, const char *function,
     struct timeval tv;
     char *buf;
 
-    if (!ucs_log_is_enabled(level) && (level != UCS_LOG_LEVEL_PRINT)) {
-        return UCS_LOG_FUNC_RC_CONTINUE;
-    }
+    // if (!ucs_log_is_enabled(level) && (level != UCS_LOG_LEVEL_PRINT)) {
+    //     return UCS_LOG_FUNC_RC_CONTINUE;
+    // }
 
     buf = ucs_alloca(buffer_size + 1);
     buf[buffer_size] = 0;
@@ -319,6 +319,13 @@ void ucs_log_init()
          ucs_open_output_stream(ucs_global_opts.log_file, UCS_LOG_LEVEL_FATAL,
                                 &ucs_log_file, &ucs_log_file_close, &next_token);
     }
+}
+
+void ucs_component_log_init(ucs_log_level_t log_level,
+                            ucs_component_log_config_t *log_config)
+{
+    ucs_log_init();
+    log_config->log_level = log_level;
 }
 
 void ucs_log_cleanup()

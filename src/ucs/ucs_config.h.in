@@ -1,0 +1,6 @@
+#ifndef UCS_CONFIG_VARS_H_
+#define UCS_CONFIG_VARS_H_
+
+#define UCS_MAX_LOG_LEVEL @UCS_MAX_LOG_LEVEL@
+
+#endif

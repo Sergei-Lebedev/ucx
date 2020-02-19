@@ -16,6 +16,7 @@ libucs_ladir       = $(includedir)/ucs
 libucs_la_LIBADD   = $(LIBM) $(top_builddir)/src/ucm/libucm.la
 
 nobase_dist_libucs_la_HEADERS = \
+	ucs_config.h \
 	algorithm/crc.h \
 	algorithm/qsort_r.h \
 	async/async_fwd.h \
@@ -33,6 +34,7 @@ nobase_dist_libucs_la_HEADERS = \
 	datastruct/strided_alloc.h \
 	datastruct/string_buffer.h \
 	datastruct/string_set.h \
+	debug/log.h \
 	memory/rcache.h \
 	memory/memory_type.h \
 	memory/memtype_cache.h \
@@ -83,7 +85,6 @@ noinst_HEADERS = \
 	datastruct/sglib_wrapper.h \
 	debug/assert.h \
 	debug/debug.h \
-	debug/log.h \
 	debug/memtrack.h \
 	memory/numa.h \
 	memory/rcache_int.h \

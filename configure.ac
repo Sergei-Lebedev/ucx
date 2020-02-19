@@ -349,6 +349,7 @@ AC_CONFIG_FILES([
                  debian/control
                  debian/changelog
                  src/ucs/Makefile
+                 src/ucs/ucs_config.h
                  src/ucp/Makefile
                  src/ucp/api/ucp_version.h
                  src/ucp/core/ucp_version.c
