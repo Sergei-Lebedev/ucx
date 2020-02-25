@@ -26,7 +26,8 @@ protected:
 
     static ucs_log_func_rc_t
     log_handler(const char *file, unsigned line, const char *function,
-                ucs_log_level_t level, const char *message, va_list ap) {
+                ucs_log_level_t level, ucs_component_log_config_t *comp_conf,
+                const char *message, va_list ap) {
         // Ignore errors that transport cannot reach peer
         if (level == UCS_LOG_LEVEL_ERROR) {
             std::string err_str = format_message(message, ap);

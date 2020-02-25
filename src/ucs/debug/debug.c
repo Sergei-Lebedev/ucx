@@ -1152,6 +1152,7 @@ static void ucs_debug_signal_handler(int signo)
 {
     ucs_log_flush();
     ucs_global_opts.log_level = UCS_LOG_LEVEL_TRACE_DATA;
+    ucs_global_opts.log_global_comp.log_level = ucs_global_opts.log_level;
     ucs_profile_dump();
 }
 

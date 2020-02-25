@@ -99,7 +99,8 @@ void uct_p2p_test::test_xfer(send_func_t send, size_t length, unsigned flags,
 
 ucs_log_func_rc_t
 uct_p2p_test::log_handler(const char *file, unsigned line, const char *function,
-                          ucs_log_level_t level, const char *message, va_list ap)
+                          ucs_log_level_t level, ucs_component_log_config_t *comp_conf,
+                          const char *message, va_list ap)
 {
     if (level == UCS_LOG_LEVEL_TRACE_DATA) {
         ++log_data_count;

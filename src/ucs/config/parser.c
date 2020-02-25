@@ -331,6 +331,18 @@ void ucs_config_help_enum(char *buf, size_t max, const void *arg)
     __print_table_values(arg, buf, max);
 }
 
+ucs_status_t ucs_config_clone_comp(const void *src, void *dst, const void *arg)
+{
+    const ucs_component_log_config_t *src_comp  = src;
+    ucs_component_log_config_t *dest_comp       = dst;
+
+    dest_comp->log_level = src_comp->log_level;
+    strncpy(dest_comp->component_name, src_comp->component_name,
+            sizeof(src_comp->component_name));
+
+    return UCS_OK;
+}
+
 int ucs_config_sscanf_bitmap(const char *buf, void *dest, const void *arg)
 {
     char *str = strdup(buf);
