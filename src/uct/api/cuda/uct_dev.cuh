@@ -13,6 +13,7 @@ extern "C" {
 
 #include <uct/api/cuda/uct.h>
 #include <uct/cuda/gdaki/gdaki.cuh>
+#include <uct/cuda/cuda_ipc/cuda_ipc.cuh>
 
 /* execute prepared batch */
 template<uct_dev_scale_t scale = UCT_DEV_SCALE_BLOCK>
@@ -20,8 +21,15 @@ __device__ static inline ucs_status_t
 uct_dev_batch_execute(uct_batch_h batch, uint64_t flags,
                       uint64_t signal_inc, uct_dev_completion_t *comp)
 {
-    assert(batch->tl_id == UCT_DEV_TL_GDAKI);
-    return uct_gdaki_batch_execute<scale>(batch, flags, signal_inc, comp);
+    switch (batch->tl_id) {
+    case UCT_DEV_TL_GDAKI:
+        return uct_gdaki_batch_execute<scale>(batch, flags, signal_inc, comp);
+    case UCT_DEV_TL_CUDA_IPC:
+        return uct_cuda_ipc_batch_execute<scale>(batch, flags, signal_inc, comp);
+    default:
+        assert(0);
+    }
+    return UCS_ERR_INVALID_PARAM;
 }
 
 /* execute prepared batch */

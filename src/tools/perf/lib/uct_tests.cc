@@ -110,7 +110,7 @@ public:
                 return run_pingpong_batch_gdaki();
             default:
                 return UCS_ERR_INVALID_PARAM;
-            }        
+            }
         case UCX_PERF_TEST_TYPE_STREAM_UNI:
             switch (m_command) {
             case UCX_PERF_CMD_PUT_BATCH:

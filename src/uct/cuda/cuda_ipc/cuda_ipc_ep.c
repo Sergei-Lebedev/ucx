@@ -11,17 +11,15 @@
 #include "cuda_ipc_iface.h"
 #include "cuda_ipc_md.h"
 #include "cuda_ipc.inl"
+#include "cuda_ipc_ep_dev.h"
 
+#include <uct/api/cuda/uct.h>
 #include <uct/base/uct_log.h>
 #include <uct/base/uct_iov.inl>
 #include <ucs/debug/memtrack_int.h>
 #include <ucs/sys/math.h>
 #include <ucs/type/class.h>
 #include <ucs/profile/profile.h>
-
-#define UCT_CUDA_IPC_PUT 0
-#define UCT_CUDA_IPC_GET 1
-
 
 static UCS_CLASS_INIT_FUNC(uct_cuda_ipc_ep_t, const uct_ep_params_t *params)
 {
@@ -227,4 +225,110 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_cuda_ipc_ep_put_zcopy,
     uct_cuda_ipc_trace_data(remote_addr, rkey, "PUT_ZCOPY [length %zu]",
                                 uct_iov_total_length(iov, iovcnt));
     return status;
+}
+
+ucs_status_t uct_cuda_ipc_ep_batch_prepare(uct_ep_h tl_ep, const uct_rma_iov_t *iov,
+                                           size_t iovcnt, uint64_t signal_va,
+                                           uct_rkey_t signal_rkey, uct_batch_h *batch_p)
+{
+    size_t batch_size;
+    uct_cuda_ipc_batch_t *batch, *batch_gpu;
+    int has_signal = (signal_va != 0);
+    size_t batch_num = iovcnt + (has_signal ? 1 : 0);
+    void *mapped_addr, *mapped_rem_addr;
+    ucs_status_t status;
+    CUresult cerr;
+    uct_cuda_ipc_unpacked_rkey_t *key;
+    size_t offset;
+    CUdevice cuda_device;
+    int is_ctx_pushed;
+
+    /* assume all VAs are on the same device,
+       otherwise we need to push ctx in the loop */
+    status = uct_cuda_ipc_check_and_push_ctx((CUdeviceptr)iov[0].local_va,
+                                             &cuda_device, &is_ctx_pushed);
+    if (ucs_unlikely(status != UCS_OK)) {
+        return status;
+    }
+
+    batch_size = sizeof(uct_cuda_ipc_batch_t) +
+                 batch_num * sizeof(uct_cuda_ipc_batch_elem_t);
+    batch = ucs_calloc(1, batch_size, "cuda ipc batch");
+    if (batch == NULL) {
+        status = UCS_ERR_NO_MEMORY;
+        goto out;
+    }
+
+    cerr = cuMemAlloc((CUdeviceptr*)&batch_gpu, batch_size);
+    if (cerr != CUDA_SUCCESS) {
+        ucs_error("cuMemAlloc failed: %s",
+                  uct_cuda_base_cu_get_error_string(cerr));
+        status = UCS_ERR_IO_ERROR;
+        goto out;
+    }
+
+    batch->super.tl_id = UCT_DEV_TL_CUDA_IPC;
+    batch->num = batch_num;
+    batch->op = UCT_CUDA_IPC_PUT;
+
+    for (size_t i = 0; i < iovcnt; i++) {
+        key = (uct_cuda_ipc_unpacked_rkey_t *)iov[i].rkey;
+        status = uct_cuda_ipc_map_memhandle(&key->super, cuda_device,
+                                            &mapped_addr);
+        if (ucs_unlikely(status != UCS_OK)) {
+            ucs_error("failed to map memhandle: %d", status);
+            goto err;
+        }
+
+        offset = (uintptr_t)iov[i].remote_va - (uintptr_t)key->super.d_bptr;
+        mapped_rem_addr = (void *) ((uintptr_t) mapped_addr + offset);
+        batch->list[i].e_op = batch->op;
+        batch->list[i].size = iov[i].length;
+        batch->list[i].src = (uint64_t)iov[i].local_va;
+        batch->list[i].dst = (uint64_t)mapped_rem_addr;
+    }
+
+    if (has_signal) {
+        key = (uct_cuda_ipc_unpacked_rkey_t *)signal_rkey;
+        status = uct_cuda_ipc_map_memhandle(&key->super, cuda_device,
+                                            &mapped_addr);
+        if (ucs_unlikely(status != UCS_OK)) {
+            ucs_error("failed to map memhandle: %d", status);
+            goto err;
+        }
+        offset = (uintptr_t)signal_va - (uintptr_t)key->super.d_bptr;
+        mapped_rem_addr = (void *) ((uintptr_t) mapped_addr + offset);
+        batch->list[iovcnt].e_op = UCT_CUDA_IPC_ATOMIC_FA;
+        batch->list[iovcnt].size = sizeof(uint64_t);
+        batch->list[iovcnt].src = (uint64_t)&batch_gpu->atomic_buff;
+        batch->list[iovcnt].dst = (uint64_t)mapped_rem_addr;
+    }
+
+    cerr = cuMemcpyHtoD((CUdeviceptr)batch_gpu, batch, batch_size);
+    if (cerr != CUDA_SUCCESS) {
+        ucs_error("cuMemcpyHtoD failed: %s",
+                  uct_cuda_base_cu_get_error_string(cerr));
+        status = UCS_ERR_IO_ERROR;
+        goto err;
+    }
+    *batch_p = &batch_gpu->super;
+    status = UCS_OK;
+    goto out;
+
+err:
+    cuMemFree((CUdeviceptr)batch_gpu);
+out:
+    ucs_free(batch);
+    uct_cuda_ipc_check_and_pop_ctx(is_ctx_pushed);
+    return status;
+}
+
+void uct_cuda_ipc_ep_batch_release(uct_ep_h tl_ep, uct_batch_h batch)
+{
+    cuMemFree((CUdeviceptr)batch);
+}
+
+ucs_status_t uct_cuda_ipc_ep_export_dev(uct_ep_h tl_ep, uct_dev_ep_h *dev_ep_p)
+{
+    return UCS_OK;
 }

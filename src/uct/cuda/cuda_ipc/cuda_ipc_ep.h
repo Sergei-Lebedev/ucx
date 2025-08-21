@@ -33,4 +33,12 @@ ucs_status_t uct_cuda_ipc_ep_put_zcopy(uct_ep_h tl_ep,
 int uct_cuda_ipc_ep_is_connected(const uct_ep_h tl_ep,
                                  const uct_ep_is_connected_params_t *params);
 
+ucs_status_t uct_cuda_ipc_ep_batch_prepare(uct_ep_h tl_ep, const uct_rma_iov_t *iov,
+                                           size_t iovcnt, uint64_t signal_va,
+                                           uct_rkey_t signal_rkey, uct_batch_h *batch_p);
+
+void uct_cuda_ipc_ep_batch_release(uct_ep_h tl_ep, uct_batch_h batch);
+
+ucs_status_t uct_cuda_ipc_ep_export_dev(uct_ep_h ep, uct_dev_ep_h *dev_ep_p);
+
 #endif

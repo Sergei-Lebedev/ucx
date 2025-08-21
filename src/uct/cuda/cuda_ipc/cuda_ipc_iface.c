@@ -268,7 +268,8 @@ static ucs_status_t uct_cuda_ipc_iface_query(uct_iface_h tl_iface,
                                           UCT_IFACE_FLAG_CONNECT_TO_IFACE |
                                           UCT_IFACE_FLAG_PENDING          |
                                           UCT_IFACE_FLAG_GET_ZCOPY        |
-                                          UCT_IFACE_FLAG_PUT_ZCOPY;
+                                          UCT_IFACE_FLAG_PUT_ZCOPY        |
+                                          UCT_IFACE_FLAG_PUT_BATCH;
     if (md->enable_mnnvl) {
         iface_attr->cap.flags |= UCT_IFACE_FLAG_INTER_NODE;
     }
@@ -323,6 +324,8 @@ static void uct_cuda_ipc_complete_event(uct_iface_h tl_iface,
 }
 
 static uct_iface_ops_t uct_cuda_ipc_iface_ops = {
+    .ep_batch_prepare         = uct_cuda_ipc_ep_batch_prepare,
+    .ep_batch_release         = uct_cuda_ipc_ep_batch_release,
     .ep_get_zcopy             = uct_cuda_ipc_ep_get_zcopy,
     .ep_put_zcopy             = uct_cuda_ipc_ep_put_zcopy,
     .ep_pending_add           = (uct_ep_pending_add_func_t)ucs_empty_function_return_busy,
@@ -330,6 +333,7 @@ static uct_iface_ops_t uct_cuda_ipc_iface_ops = {
     .ep_flush                 = uct_base_ep_flush,
     .ep_fence                 = uct_base_ep_fence,
     .ep_check                 = (uct_ep_check_func_t)ucs_empty_function_return_unsupported,
+    .ep_export_dev            = uct_cuda_ipc_ep_export_dev,
     .ep_create                = UCS_CLASS_NEW_FUNC_NAME(uct_cuda_ipc_ep_t),
     .ep_destroy               = UCS_CLASS_DELETE_FUNC_NAME(uct_cuda_ipc_ep_t),
     .iface_flush              = uct_cuda_base_iface_flush,
