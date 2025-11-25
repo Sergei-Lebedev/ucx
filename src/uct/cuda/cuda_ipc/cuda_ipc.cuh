@@ -310,7 +310,7 @@ uct_cuda_ipc_ep_atomic_add(uct_device_ep_h device_ep,
     if (lane_id == 0) {
         mapped_rem_addr = reinterpret_cast<uint64_t *>(uct_cuda_ipc_map_remote(cuda_ipc_mem_element,
                                                                                remote_address));
-        uct_cuda_ipc_atomic_inc(mapped_rem_addr, inc_value);
+        asm volatile ("red.global.sys.add.u64 [%0], %1;" :: "l"(mapped_rem_addr), "l"(inc_value) : "memory");
     }
 
     uct_cuda_ipc_level_sync<level>();
